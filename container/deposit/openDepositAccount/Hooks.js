@@ -315,10 +315,10 @@ export const useOpenDepositAccount = () => {
     formData.append("prod_type", data.accountType);
     formData.append(
       "dep_type",
-      productData.find((prod) => prod.Id === Number(data.accountType))
+      productData.find((prod) => prod.Id === Number(data.depositProduct))
         .Deposit_Type
     );
-    formData.append("prod_id", data.accountType);
+    formData.append("prod_id", data.depositProduct);
     formData.append("oper_mode", data.operationMode);
     formData.append("proi", data.rateOfInterest);
     formData.append("pamount", data.openingAmount);
@@ -327,7 +327,9 @@ export const useOpenDepositAccount = () => {
     formData.append("matur_ins", data.maturityInstruction);
     formData.append(
       "matur_date",
-      data.maturityDate ? data.maturityDate.toISOString().slice(0, 10) : null
+      data.maturityDate
+        ? new Date(data.maturityDate).toISOString().slice(0, 10)
+        : null
     );
     formData.append("matur_amt", data.maturityAmount);
     formData.append("nom_name", data.nomineeName);
@@ -584,6 +586,7 @@ export const useOpenDepositAccount = () => {
               )
             );
         }
+        toast.success(res.details);
       } else {
         setCheckDepositDurationDisable(true);
         setCheckDepositDurationMessage(res.details);
@@ -921,22 +924,39 @@ export const useOpenDepositAccount = () => {
     form.setValue("jointHolderDetails", []);
   }, [operationMode]);
 
+  const prevDuration = useRef();
+  const prevDurationUnit = useRef();
+  const prevDepositProduct = useRef();
   const prevOpeningDate = useRef();
 
   useEffect(() => {
+    const currentDuration = form.getValues("duration");
+    const currentDurationUnit = form.getValues("durationUnit");
+    const currentDepositProduct = form.getValues("depositProduct");
     const currentOpeningDate = form.getValues("openingDate");
 
     if (
-      currentOpeningDate &&
-      currentOpeningDate !== prevOpeningDate.current &&
       (accountType === "2"
-        ? duration && durationUnit && depositProduct && openingDate
-        : depositProduct && openingDate) &&
+        ? currentDuration &&
+          currentDurationUnit &&
+          currentDepositProduct &&
+          currentOpeningDate &&
+          (currentDuration !== prevDuration.current ||
+            currentDurationUnit !== prevDurationUnit.current ||
+            currentDepositProduct !== prevDepositProduct.current ||
+            currentOpeningDate !== prevOpeningDate.current)
+        : currentDepositProduct &&
+          currentOpeningDate &&
+          (currentDepositProduct !== prevDepositProduct.current ||
+            currentOpeningDate !== prevOpeningDate.current)) &&
       orgId
     ) {
       getDepositInterestRateApiCall(orgId);
     }
 
+    prevDuration.current = currentDuration;
+    prevDurationUnit.current = currentDurationUnit;
+    prevDepositProduct.current = currentDepositProduct;
     prevOpeningDate.current = currentOpeningDate;
   }, [duration, durationUnit, depositProduct, accountType, openingDate]);
 

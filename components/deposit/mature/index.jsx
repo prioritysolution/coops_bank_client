@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import Image from "next/image";
+import { useState } from "react";
 import { IoSearch } from "react-icons/io5";
 import { useSelector } from "react-redux";
 
@@ -76,7 +77,16 @@ const Mature = ({
   handleFetchData,
   savingsAccountFullName,
   savingsAccountBalance,
+  showMatureDialog,
+  setShowMatureDialog,
+  handleCancelPremature,
+  getDepositMaturityInterestApiCall,
+  getDepositMaturityBonusInterestApiCall,
+  showBonusDialog,
+  setShowBonusDialog,
 }) => {
+  const [bonusInterest, setBonusInterest] = useState("");
+
   const bankAccountData = useSelector(
     (state) => state?.bankDeposit?.bankAccountData
   );
@@ -466,7 +476,7 @@ const Mature = ({
                         name="amount"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Amount</FormLabel>
+                            <FormLabel>Princpal Amount</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Enter amount"
@@ -479,29 +489,71 @@ const Mature = ({
                         )}
                       />
 
-                      <div className="flex flex-col sm:flex-row items-end gap-5 w-full">
-                        <FormField
-                          control={form.control}
-                          name="interest"
-                          className=""
-                          render={({ field }) => (
-                            <FormItem className="w-full">
-                              <FormLabel>Interest</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Enter interest"
-                                  className=""
-                                  {...field}
-                                  // disabled
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="text-nowrap px-3 py-2 rounded-md cursor-pointer bg-primary text-white h-fit">
-                          <p>Calculate Interest</p>
-                        </div>
+                      <FormField
+                        control={form.control}
+                        name="interest"
+                        className=""
+                        render={({ field }) => (
+                          <FormItem className="w-full">
+                            <FormLabel>Interest</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter interest"
+                                className=""
+                                {...field}
+                                // disabled
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="bonusInterest"
+                        className=""
+                        render={({ field }) => (
+                          <FormItem className="w-full">
+                            <FormLabel>Bonus Interest</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter bonus interest"
+                                className=""
+                                {...field}
+                                disabled
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="totalAmount"
+                        className=""
+                        render={({ field }) => (
+                          <FormItem className="w-full">
+                            <FormLabel>Total Amount</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter total amount"
+                                className=""
+                                {...field}
+                                disabled
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div
+                        className="text-nowrap px-3 py-2 rounded-md cursor-pointer bg-primary text-white h-fit text-center"
+                        onClick={getDepositMaturityInterestApiCall}
+                      >
+                        <p>Calculate Interest</p>
                       </div>
                     </div>
                   </div>
@@ -833,9 +885,13 @@ const Mature = ({
                       type="submit"
                       className="w-full sm:w-1/5"
                       disabled={
-                        Number(cashInTransactionGrandTotal) -
-                          Number(cashOutTransactionGrandTotal) !==
-                        Number(form.getValues("amount"))
+                        optionForm.getValues("operationType") === "close"
+                          ? Number(cashInTransactionGrandTotal) -
+                              Number(cashOutTransactionGrandTotal) !==
+                            Number(form.getValues("amount"))
+                          : Number(cashInTransactionGrandTotal) -
+                              Number(cashOutTransactionGrandTotal) !==
+                            Number(form.getValues("totalAmount"))
                       }
                     >
                       Add
@@ -847,6 +903,81 @@ const Mature = ({
           </ScrollArea>
         )}
       </div>
+      <Dialog open={showMatureDialog} onOpenChange={setShowMatureDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogTitle className="w-full text-center">
+            Mature Date Exceeds
+          </DialogTitle>
+          <div className="w-full flex flex-col gap-5 items-center justify-center">
+            <p className="w-full text-center">
+              Your maturity date is{" "}
+              <span className="font-semibold">
+                {form.getValues("maturityDate") &&
+                  format(form.getValues("maturityDate"), "dd-MM-yyyy")}
+                .
+              </span>{" "}
+              Do you want to pre-mature this account ?
+            </p>
+            <div className="w-full flex items-center justify-between gap-2 ">
+              <Button
+                className="px-6 bg-destructive hover:bg-destructive/90"
+                onClick={handleCancelPremature}
+              >
+                No
+              </Button>
+              <Button
+                className="px-6"
+                onClick={() => setShowMatureDialog(false)}
+              >
+                Yes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBonusDialog} onOpenChange={setShowBonusDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogTitle className="w-full text-center">
+            Bonus Interest
+          </DialogTitle>
+          <div className="w-full flex flex-col gap-5 items-center justify-center">
+            <p className="w-full text-center">
+              Your maturity date is{" "}
+              <span className="font-semibold">
+                {form.getValues("maturityDate") &&
+                  format(form.getValues("maturityDate"), "dd-MM-yyyy")}
+                .
+              </span>{" "}
+              Do you want bonus interest to this account ?
+            </p>
+
+            <Input
+              placeholder="Enter bonus interest"
+              type="number"
+              value={bonusInterest}
+              onChange={(e) => setBonusInterest(e.target.value)}
+            />
+
+            <div className="w-full flex items-center justify-between gap-2 ">
+              <Button
+                className="px-6 bg-destructive hover:bg-destructive/90"
+                onClick={() => setShowBonusDialog(false)}
+              >
+                No
+              </Button>
+              <Button
+                className="px-6"
+                onClick={() =>
+                  getDepositMaturityBonusInterestApiCall(bonusInterest)
+                }
+              >
+                Yes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

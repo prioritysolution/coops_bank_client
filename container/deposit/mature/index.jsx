@@ -44,6 +44,13 @@ const MatureContainer = () => {
     handleFetchData,
     savingsAccountFullName,
     savingsAccountBalance,
+    showMatureDialog,
+    setShowMatureDialog,
+    handleCancelPremature,
+    getDepositMaturityInterestApiCall,
+    getDepositMaturityBonusInterestApiCall,
+    showBonusDialog,
+    setShowBonusDialog,
   } = useMature();
 
   const { getNoteDenomApiCall } = useIssueMembership();
@@ -91,6 +98,15 @@ const MatureContainer = () => {
       handleFetchData={handleFetchData}
       savingsAccountFullName={savingsAccountFullName}
       savingsAccountBalance={savingsAccountBalance}
+      showMatureDialog={showMatureDialog}
+      setShowMatureDialog={setShowMatureDialog}
+      handleCancelPremature={handleCancelPremature}
+      getDepositMaturityInterestApiCall={getDepositMaturityInterestApiCall}
+      getDepositMaturityBonusInterestApiCall={
+        getDepositMaturityBonusInterestApiCall
+      }
+      showBonusDialog={showBonusDialog}
+      setShowBonusDialog={setShowBonusDialog}
     />
   );
 };

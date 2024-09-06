@@ -9,7 +9,11 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { format } from "date-fns";
 import {
   getDepositCloseAccountAPI,
+  getDepositMatureAccountAPI,
+  getDepositMaturityBonusInterestAPI,
+  getDepositMaturityInterestAPI,
   postDepositCloseAccountAPI,
+  postDepositMatureAccountAPI,
 } from "./MatureApis";
 import { getSpecimenAPI } from "../withdrawn/WithdrawnApis";
 import { useDeposit } from "../deposit/Hooks";
@@ -29,13 +33,16 @@ export const useMature = () => {
   const [showLedger, setShowLedger] = useState(false);
   const [photoLink, setPhotoLink] = useState(null);
   const [signatureLink, setSignatureLink] = useState(null);
-  const [optionValue, setOptionValue] = useState(null);
   const [disableOperationTypeForm, setDisableOperationTypeForm] =
     useState(false);
   const [showSearchAccountForm, setShowSearchAccountForm] = useState(false);
   const [dialougeOpen, setDialougeOpen] = useState(false);
   const [savingsAccountFullName, setSavingsAccountFullName] = useState(null);
   const [savingsAccountBalance, setSavingsAccountBalance] = useState(null);
+  const [showMatureDialog, setShowMatureDialog] = useState(false);
+  const [showBonusDialog, setShowBonusDialog] = useState(false);
+
+  const [bonusInterestInput, setBonusInterestInput] = useState(false);
 
   // denominators
   const [inDenominators, setInDenominators] = useState([]);
@@ -72,6 +79,8 @@ export const useMature = () => {
     closeDate: yup.string().required("Close date is required"),
     amount: yup.string().required("Amount is required"),
     interest: yup.string(),
+    bonusInterest: yup.string(),
+    totalAmount: yup.string(),
     Joint_1: yup.string(),
     Joint_2: yup.string(),
     transMode: yup.string().required("Transanction mode is required"),
@@ -98,7 +107,8 @@ export const useMature = () => {
       closeDate: null,
       amount: "",
       interest: "",
-      transMode: "",
+      bonusInterest: "",
+      totalAmount: "",
       Joint_1: "",
       Joint_2: "",
       transMode: "cash",
@@ -114,21 +124,26 @@ export const useMature = () => {
   });
 
   const { control } = form;
-  const { transMode } = useWatch({ control });
+  const { transMode, amount, interest, bonusInterest } = useWatch({ control });
+
+  const { operationType } = useWatch({ control: optionForm.control });
 
   const handleSubmit = async (values) => {
-    optionForm.getValues("operationType") === "close"
+    operationType === "close"
       ? postDepositCloseAccountApiCall(values)
-      : console.log(Hello);
+      : postDepositMatureAccountApiCall(values);
   };
 
   const handleAccountFormSubmit = (values) => {
-    getAccountDetailsByAccountNoApiCall(values);
+    if (operationType === "close") {
+      getAccountDetailsByAccountNoApiCall(values);
+    } else {
+      getMatureAccountDetailsByAccountNoApiCall(values);
+    }
     form.setValue("closeDate", format(values.date, "dd-MM-yyyy"));
   };
 
-  const handleOptionFormSubmit = (values) => {
-    setOptionValue(values);
+  const handleOptionFormSubmit = () => {
     setShowSearchAccountForm(true);
     setDisableOperationTypeForm(true);
   };
@@ -165,6 +180,15 @@ export const useMature = () => {
     }
   };
 
+  const handleCancelPremature = () => {
+    form.reset();
+    const defaultDenominators = Array(cashDenomData.length).fill("");
+    setInDenominators(defaultDenominators);
+    setOutDenominators(defaultDenominators);
+    setShowMatureDialog(false);
+    setVisibleBlock(false);
+  };
+
   const postDepositCloseAccountApiCall = async (item) => {
     const cashDetails = cashOutDenomArray.map((outItem, idx) => {
       return {
@@ -193,6 +217,62 @@ export const useMature = () => {
 
     try {
       const res = await postDepositCloseAccountAPI(data);
+
+      if (res.message === "Success") {
+        setSuccessMessage(res.details);
+        optionForm.reset();
+        form.reset();
+        const defaultDenominators = Array(cashDenomData.length).fill("");
+        setInDenominators(defaultDenominators);
+        setOutDenominators(defaultDenominators);
+        // toast.success(res.details || res.message);
+        setDisableOperationTypeForm(false);
+      } else {
+        toast.error(res.details || res.message);
+        setSuccessMessage(null);
+        setVisibleBlock(true);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong");
+      setSuccessMessage(null);
+      setVisibleBlock(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const postDepositMatureAccountApiCall = async (item) => {
+    const cashDetails = cashOutDenomArray.map((outItem, idx) => {
+      return {
+        note_id: outItem.note_id,
+        in_qnty: outItem.denominator,
+        out_qnty: cashInDenomArray.filter(
+          (inItem) => outItem.note_id === inItem.note_id
+        )[0].denominator,
+        tot_amount: cashInTransactionTotal[idx] - cashOutTransactionTotal[idx],
+      };
+    });
+    let data = {
+      trans_date: format(Date(item.closeDate), "yyyy-MM-dd"),
+      account_id: depositProduct.Acct_Id,
+      member_id: depositProduct.Mem_Id,
+      principal_amt: item.amount,
+      intt_amt: item.interest,
+      bonus_amt: item.bonusInterest | "",
+      bonus_rate: bonusInterestInput | "",
+      cash_details: cashDetails,
+      sb_id: null,
+      bank_id: null,
+      branch_id: branchId,
+      fin_id: finId,
+      org_id: orgId,
+    };
+
+    setLoading(true);
+
+    try {
+      const res = await postDepositMatureAccountAPI(data);
 
       if (res.message === "Success") {
         setSuccessMessage(res.details);
@@ -317,7 +397,6 @@ export const useMature = () => {
         form.setValue("joint1", "");
         form.setValue("joint2", "");
         setDepositProduct(null);
-        setVisibleBlock(true);
         setVisibleBlock(false);
         setShowLedger(false);
       }
@@ -338,6 +417,140 @@ export const useMature = () => {
       setDepositProduct(null);
       setVisibleBlock(false);
       setShowLedger(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMatureAccountDetailsByAccountNoApiCall = async (item) => {
+    setLoading(true);
+
+    let data = {
+      acct_no: item.accountNo,
+      date: format(item.date, "yyyy-MM-dd"),
+      org_id: orgId,
+    };
+
+    try {
+      const res = await getDepositMatureAccountAPI(data);
+      if (res.message === "Data Found") {
+        form.setValue("memberNo", res.details[0].Member_No);
+        form.setValue("cifNo", res.details[0].CIF_No);
+        form.setValue("memberName", res.details[0].Full_Name);
+        form.setValue("gurdianName", res.details[0].Relation_Name);
+        form.setValue("mobile", res.details[0].Mem_Mob);
+        form.setValue("panNo", res.details[0].Mem_Pan);
+        form.setValue("rateOfInterest", res.details[0].ROI);
+        form.setValue("maturityDate", res.details[0].Maturity_Date);
+        form.setValue("maturityAmount", res.details[0].Maturity_Amount);
+        form.setValue("availableBalance", res.details[0].Avail_Bal);
+        form.setValue("amount", res.details[0].Avail_Bal);
+        form.setValue("joint1", res.details[0].Joint_1);
+        form.setValue("joint2", res.details[0].Joint_2);
+
+        if (
+          res.details[0].Maturity_Date > item.date.toISOString().slice(0, 10)
+        ) {
+          setShowMatureDialog(true);
+        }
+
+        setDepositProduct(res.details[0]);
+        setVisibleBlock(true);
+        setShowLedger(true);
+      } else {
+        toast.error(res.details || res.message);
+        form.setValue("memberNo", "");
+        form.setValue("cifNo", "");
+        form.setValue("memberName", "");
+        form.setValue("gurdianName", "");
+        form.setValue("mobile", "");
+        form.setValue("panNo", "");
+        form.setValue("rateOfInterest", "");
+        form.setValue("maturityDate", "");
+        form.setValue("maturityAmount", "");
+        form.setValue("availableBalance", "");
+        form.setValue("amount", "");
+        form.setValue("joint1", "");
+        form.setValue("joint2", "");
+        setDepositProduct(null);
+        setVisibleBlock(false);
+        setShowLedger(false);
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+      console.error(error);
+      form.setValue("memberNo", "");
+      form.setValue("cifNo", "");
+      form.setValue("memberName", "");
+      form.setValue("gurdianName", "");
+      form.setValue("mobile", "");
+      form.setValue("panNo", "");
+      form.setValue("rateOfInterest", "");
+      form.setValue("maturityDate", "");
+      form.setValue("maturityAmount", "");
+      form.setValue("availableBalance", "");
+      form.setValue("amount", "");
+      form.setValue("joint1", "");
+      form.setValue("joint2", "");
+      setDepositProduct(null);
+      setVisibleBlock(false);
+      setShowLedger(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDepositMaturityInterestApiCall = async (value) => {
+    setLoading(true);
+
+    let data = {
+      acct_id: depositProduct.Acct_Id,
+      date: format(form.getValues("closeDate"), "yyyy-MM-dd"),
+      org_id: orgId,
+    };
+
+    try {
+      const res = await getDepositMaturityInterestAPI(data);
+      if (res.message === "Data Found") {
+        form.setValue("interest", res.details);
+        setShowBonusDialog(true);
+      } else {
+        toast.error(res.details || res.message);
+        form.setValue("interest", "");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+      console.error(error);
+      form.setValue("interest", "");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDepositMaturityBonusInterestApiCall = async (roi) => {
+    setLoading(true);
+
+    let data = {
+      acct_id: depositProduct.Acct_Id,
+      date: format(form.getValues("closeDate"), "yyyy-MM-dd"),
+      roi,
+      org_id: orgId,
+    };
+
+    try {
+      const res = await getDepositMaturityBonusInterestAPI(data);
+      if (res.message === "Data Found") {
+        form.setValue("bonusInterest", res.details);
+        setShowBonusDialog(false);
+        setBonusInterestInput(roi);
+      } else {
+        toast.error(res.details || res.message);
+        form.setValue("bonusInterest", "");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+      console.error(error);
+      form.setValue("bonusInterest", "");
     } finally {
       setLoading(false);
     }
@@ -446,6 +659,16 @@ export const useMature = () => {
     setCashOutDenomArray(postData);
   }, [outDenominators, cashOutTransactionTotal]);
 
+  useEffect(() => {
+    if (amount && interest && bonusInterest) {
+      let totalAmount =
+        Number(amount) + Number(interest) + Number(bonusInterest);
+      form.setValue("totalAmount", totalAmount);
+    } else {
+      form.setValue("totalAmount", "");
+    }
+  }, [amount, interest, bonusInterest]);
+
   return {
     loading,
     cashDenomData,
@@ -479,5 +702,12 @@ export const useMature = () => {
     handleFetchData,
     savingsAccountFullName,
     savingsAccountBalance,
+    showMatureDialog,
+    setShowMatureDialog,
+    handleCancelPremature,
+    getDepositMaturityInterestApiCall,
+    getDepositMaturityBonusInterestApiCall,
+    showBonusDialog,
+    setShowBonusDialog,
   };
 };

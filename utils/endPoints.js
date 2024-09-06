@@ -93,7 +93,11 @@ export const endPoints = {
   getDepositInterestProduct: (orgId, typeId) =>
     `${createApi}Org/ProcessDeposit/GetProduct/${orgId}/${typeId}`,
   getDepositCloseAccount: `${createApi}Org/ProcessDeposit/GetCloseData`,
+  getDepositMatureAccount: `${createApi}Org/ProcessDeposit/GetMatureData`,
   addDepositCloseAccount: `${createApi}Org/ProcessDeposit/PostCloseAccount`,
+  getDepositMaturityInterest: `${createApi}Org/ProcessDeposit/CalMatureInterest`,
+  getDepositMaturityBonusInterest: `${createApi}Org/ProcessDeposit/CalBonusInterest`,
+  addDepositMatureAccount: `${createApi}Org/ProcessDeposit/MatureAccount`,
   getBankAccountType: `${createApi}Org/ProcessBankAccount/GetAccountType`,
   getBankGl: `${createApi}Org/ProcessBankAccount/GetGl`,
   addOpenBankAccount: `${createApi}Org/ProcessBankAccount/AddAccount`,

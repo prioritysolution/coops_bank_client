@@ -30,13 +30,21 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useSelector } from "react-redux";
 
-const Renewal = () => {
-  const form = useForm();
-  const visibleBlock = true;
-  const successMessage = "";
-  const handleSubmit = () => {};
+const Renewal = ({
+  loading,
+  form,
+  handleSubmit,
+  handleAccountFormSubmit,
+  visibleBlock,
+  successMessage,
+  checkDepositDurationDisable,
+  checkDepositDurationMessage,
+}) => {
+  const durationTypeData = useSelector(
+    (state) => state?.openDepositAccount?.durationTypeData
+  );
 
   return (
     <div className="w-full h-full flex justify-between p-2 lg:p-5 bg-[#fefefe] rounded-lg ">
@@ -45,7 +53,7 @@ const Renewal = () => {
 
         <ScrollArea className="w-full h-full px-2 sm:px-10 2xl:px-20">
           <div className="w-full h-full mb-10">
-            <AccountSearchForm handleSubmit={() => {}} />
+            <AccountSearchForm handleSubmit={handleAccountFormSubmit} />
           </div>
           <Form {...form}>
             <form
@@ -276,45 +284,52 @@ const Renewal = () => {
                   <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-x-10 gap-y-3 ">
                     <FormField
                       control={form.control}
+                      name="renewalType"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col space-y-0 gap-x-10 gap-y-5   border border-input rounded-md px-3 pr-10 py-3 w-full ">
+                          <FormLabel>Select renewal type</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="flex flex-col space-y-5 sm:space-y-0 gap-x-5"
+                            >
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="principal" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Principal Value
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="maturity" />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Maturity Value
+                                </FormLabel>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="renewalDate"
                       render={({ field }) => (
-                        <FormItem className="flex flex-col justify-end">
+                        <FormItem>
                           <FormLabel>Renewal Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full pl-3 text-left ",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "dd-MM-yyyy")
-                                  ) : (
-                                    <span>Pick renewal date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-full p-0"
-                              align="center"
-                            >
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() ||
-                                  date < new Date("1900-01-01")
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter renewal date"
+                              {...field}
+                              disabled
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -330,6 +345,11 @@ const Renewal = () => {
                             <Input placeholder="Enter duration" {...field} />
                           </FormControl>
                           <FormMessage />
+                          {checkDepositDurationMessage && (
+                            <p className="text-destructive text-sm">
+                              {checkDepositDurationMessage}
+                            </p>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -350,15 +370,13 @@ const Renewal = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {/* {payoutModeData &&
-                                      payoutModeData.length > 0 &&
-                                      payoutModeData.map(
-                                        ({ Id, Option_Value }) => (
-                                          <SelectItem key={Id} value={`${Id}`}>
-                                            {Option_Value}
-                                          </SelectItem>
-                                        )
-                                      )} */}
+                              {durationTypeData &&
+                                durationTypeData.length > 0 &&
+                                durationTypeData.map(({ Id, Option_Value }) => (
+                                  <SelectItem key={Id} value={`${Id}`}>
+                                    {Option_Value}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -376,7 +394,7 @@ const Renewal = () => {
                           <FormControl>
                             <Input
                               placeholder="Enter rate of interest"
-                              className=""
+                              disabled
                               {...field}
                             />
                           </FormControl>
@@ -394,6 +412,7 @@ const Renewal = () => {
                           <FormControl>
                             <Input
                               placeholder="Enter maturity amount"
+                              disabled
                               {...field}
                             />
                           </FormControl>
@@ -405,88 +424,67 @@ const Renewal = () => {
                 </div>
               )}
 
-              {/* {visibleBlock && (
-                <div className="w-full h-full flex flex-col border border-primary rounded-lg p-2 sm:p-5 gap-5">
-                  <h3 className="w-full text-center text-xl font-semibold">
-                    Transanction Block
-                  </h3>
-                  <div className="w-full border border-primary rounded-md p-5 mb-5">
-                    <FormField
-                      control={form.control}
-                      name="transMode"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col lg:flex-row items-center space-y-0 gap-x-10 gap-y-5   border border-input rounded-md px-3 pr-10 py-3 w-full lg:w-fit">
-                          <FormLabel>Select transanction mode</FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex flex-col sm:flex-row space-y-5 sm:space-y-0 gap-x-5"
-                            >
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="cash" />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Cash
-                                </FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="bank" />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Bank
-                                </FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  {true && (
-                    <div className="w-full flex flex-col lg:flex-row gap-10">
-                      <div className="w-full ">
-                        <h3 className="text-center font-semibold text-xl mb-5">
-                          Cash Out Table
-                        </h3>
-                        <CashDenomTable
-                        // notes={notes}
-                        // denominators={inDenominators}
-                        // totalAmount={cashInTransactionTotal}
-                        // cashTransactionGrandTotal={
-                        //   cashInTransactionGrandTotal
-                        // }
-                        // handleDenominatorChange={handleInDenominatorChange}
-                        // amountTobePaid={Number(form.getValues("refundAmt"))}
-                        // outTable={false}
-                        />
-                      </div>
-                      <div className="w-full ">
-                        <h3 className="text-center font-semibold text-xl mb-5">
-                          Cash In Table
-                        </h3>
-                        <CashDenomTable
-                        // notes={notes}
-                        // denominators={outDenominators}
-                        // totalAmount={cashOutTransactionTotal}
-                        // cashTransactionGrandTotal={
-                        //   cashOutTransactionGrandTotal
-                        // }
-                        // handleDenominatorChange={handleOutDenominatorChange}
-                        // amountTobePaid={
-                        //   Number(cashInTransactionGrandTotal) -
-                        //   Number(form.getValues("refundAmt"))
-                        // }
-                        // outTable={true}
-                        />
-                      </div>
+              {visibleBlock &&
+                form.getValues("renewalType") === "principal" && (
+                  <div className="w-full h-full flex flex-col border border-primary rounded-lg p-2 sm:p-5 gap-5">
+                    <h3 className="w-full text-center text-xl font-semibold">
+                      Transanction Block
+                    </h3>
+                    <div className="w-full border border-primary rounded-md p-5 mb-5 grid grid-cols-3 gap-5">
+                      <FormField
+                        control={form.control}
+                        name="payoutAmount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Payout Amount</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter payout amount"
+                                disabled
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="transMode"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col lg:flex-row items-center space-y-0 gap-x-10 gap-y-5   border border-input rounded-md px-3 pr-10 py-3 w-full lg:w-fit col-span-3">
+                            <FormLabel>Select transanction mode</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex flex-col sm:flex-row space-y-5 sm:space-y-0 gap-x-5"
+                              >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <RadioGroupItem value="bank" />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    Bank
+                                  </FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <RadioGroupItem value="savings" />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    Savings
+                                  </FormLabel>
+                                </FormItem>
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  )}
-                </div>
-              )} */}
+                  </div>
+                )}
 
               {visibleBlock && (
                 <div className="w-full flex flex-col sm:flex-row text-center sm:text-start items-center justify-between gap-y-5">
@@ -501,7 +499,8 @@ const Renewal = () => {
                     // disabled={
                     //   Number(cashInTransactionGrandTotal) -
                     //     Number(cashOutTransactionGrandTotal) !==
-                    //   Number(form.getValues("refundAmt"))
+                    //     Number(form.getValues("refundAmt")) ||
+                    //   checkDepositDurationDisable
                     // }
                   >
                     Add
