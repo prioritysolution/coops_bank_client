@@ -15,6 +15,7 @@ import openDepositAccountSlice from "@/container/deposit/openDepositAccount/Open
 import depositSlice from "@/container/deposit/deposit/DepositReducer";
 import openBankAccountSlice from "@/container/banking/openBankAccount/OpenBankAccountReducer";
 import bankDepositSlice from "@/container/banking/bankDeposit/BankDepositReducer";
+import interestPayoutSlice from "@/container/deposit/interestPayout/InterestPayoutReducer";
 
 export const store = configureStore({
   reducer: {
@@ -32,6 +33,7 @@ export const store = configureStore({
     deposit: depositSlice,
     openBankAccount: openBankAccountSlice,
     bankDeposit: bankDepositSlice,
+    interestPayout: interestPayoutSlice,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(logger),
 });

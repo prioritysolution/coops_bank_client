@@ -5,13 +5,15 @@ import toast from "react-hot-toast";
 import { useForm, useWatch } from "react-hook-form";
 import getSessionStorageData from "@/utils/getSessionStorageData";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { format } from "date-fns";
+import { addDays, addMonths, addYears, format } from "date-fns";
 import { getDepositMatureAccountAPI } from "../mature/MatureApis";
 import {
   checkDepositDurationAPI,
   getDepositInterestRateAPI,
   getDepositMaturityAmountAPI,
 } from "../openDepositAccount/OpenDepositAccountApis";
+import { useOpenDepositAccount } from "../openDepositAccount/Hooks";
+import { postDepositRenewalAccountAPI } from "./RenewalApis";
 
 export const useRenewal = () => {
   const orgId = getSessionStorageData("orgId");
@@ -27,6 +29,8 @@ export const useRenewal = () => {
     useState(false);
   const [checkDepositDurationMessage, setCheckDepositDurationMessage] =
     useState("");
+
+  const { getDepositEcsAccountApiCall } = useOpenDepositAccount();
 
   const formSchema = yup.object({
     memberNo: yup.string().required("Member no. is required"),
@@ -45,10 +49,13 @@ export const useRenewal = () => {
     durationUnit: yup.string().required("Duration unit is required"),
     newRateOfInterest: yup.string().required("Rate of interest is required"),
     newMaturityAmount: yup.string().required("Maturity amount is required"),
+    newMaturityDate: yup.string().required("Maturity date is required"),
     payoutAmount: yup.string(),
     Joint_1: yup.string(),
     Joint_2: yup.string(),
     transMode: yup.string().required("Transanction mode is required"),
+    bank: yup.string(),
+    savings: yup.string(),
   });
 
   const form = useForm({
@@ -70,6 +77,7 @@ export const useRenewal = () => {
       durationUnit: "",
       newRateOfInterest: "",
       newMaturityAmount: "",
+      newMaturityDate: "",
       payoutAmount: "",
       Joint_1: "",
       Joint_2: "",
@@ -99,36 +107,31 @@ export const useRenewal = () => {
   };
 
   const postDepositRenewalAccountApiCall = async (item) => {
-    const cashDetails = cashOutDenomArray.map((outItem, idx) => {
-      return {
-        note_id: outItem.note_id,
-        in_qnty: outItem.denominator,
-        out_qnty: cashInDenomArray.filter(
-          (inItem) => outItem.note_id === inItem.note_id
-        )[0].denominator,
-        tot_amount: cashInTransactionTotal[idx] - cashOutTransactionTotal[idx],
-      };
-    });
     let data = {
-      trans_date: format(Date(item.closeDate), "yyyy-MM-dd"),
+      trans_date: format(Date(item.renewalDate), "yyyy-MM-dd"),
       account_id: depositProduct.Acct_Id,
       member_id: depositProduct.Mem_Id,
-      principal_amt: item.amount,
-      intt_amt: item.interest,
-      bonus_amt: item.bonusInterest | "",
-      bonus_rate: bonusInterestInput | "",
-      cash_details: cashDetails,
-      sb_id: null,
-      bank_id: null,
+      principal_amt: item.depositAmount,
+      intt_amt: Number(item.maturityAmount) - Number(item.depositAmount),
+      pay_amt: item.renewalType === "principal" ? item.payoutAmount : "0",
+      roi: item.newRateOfInterest,
+      matur_val: item.newMaturityAmount,
+      duration: item.duration,
+      dur_unit: item.durationUnit,
+      mature_date: format(Date(item.newMaturityDate), "yyyy-MM-dd"),
+      sb_id: item.transMode === "savings" ? item.savings : null,
+      bank_id: item.transMode === "bank" ? item.bank : null,
       branch_id: branchId,
       fin_id: finId,
       org_id: orgId,
     };
 
+    console.log(data);
+
     setLoading(true);
 
     try {
-      const res = await postDepositMatureAccountAPI(data);
+      const res = await postDepositRenewalAccountAPI(data);
 
       if (res.message === "Success") {
         setSuccessMessage(res.details);
@@ -176,6 +179,7 @@ export const useRenewal = () => {
           form.setValue("joint2", res.details[0].Joint_2);
           setDepositProduct(res.details[0]);
           setVisibleBlock(true);
+          getDepositEcsAccountApiCall(orgId, res.details[0].Mem_Id);
         } else {
           toast.error(
             `Maturity date is ${format(
@@ -239,18 +243,54 @@ export const useRenewal = () => {
       if (res.message === "Data Found") {
         setCheckDepositDurationDisable(false);
         setCheckDepositDurationMessage("");
+        if (form.getValues("maturityDate")) {
+          if (form.getValues("durationUnit") === "17")
+            form.setValue(
+              "newMaturityDate",
+              format(
+                addDays(
+                  form.getValues("maturityDate"),
+                  Number(form.getValues("duration"))
+                ),
+                "dd-MM-yyyy"
+              )
+            );
+          else if (form.getValues("durationUnit") === "18")
+            form.setValue(
+              "newMaturityDate",
+              format(
+                addMonths(
+                  form.getValues("maturityDate"),
+                  Number(form.getValues("duration"))
+                ),
+                "dd-MM-yyyy"
+              )
+            );
+          else if (form.getValues("durationUnit") === "19")
+            form.setValue(
+              "newMaturityDate",
+              format(
+                addYears(
+                  form.getValues("maturityDate"),
+                  Number(form.getValues("duration"))
+                ),
+                "dd-MM-yyyy"
+              )
+            );
+        }
+
         toast.success(res.details);
       } else {
         setCheckDepositDurationDisable(true);
         setCheckDepositDurationMessage(res.details);
-        form.setValue("maturityDate", null);
+        form.setValue("newMaturityDate", "");
       }
     } catch (error) {
       toast.error("Something went wrong");
       console.error(error);
       setCheckDepositDurationDisable(true);
       setCheckDepositDurationMessage("");
-      form.setValue("maturityDate", null);
+      form.setValue("newMaturityDate", "");
     } finally {
       setLoading(false);
     }

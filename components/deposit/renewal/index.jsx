@@ -1,7 +1,6 @@
 "use client";
 
 import AccountSearchForm from "@/common/forms/AccountSearchForm";
-import CashDenomTable from "@/common/tables/CashDenomTable";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -44,6 +43,14 @@ const Renewal = ({
 }) => {
   const durationTypeData = useSelector(
     (state) => state?.openDepositAccount?.durationTypeData
+  );
+
+  const bankAccountData = useSelector(
+    (state) => state?.bankDeposit?.bankAccountData
+  );
+
+  const savingsAccountData = useSelector(
+    (state) => state?.openDepositAccount?.ecsAccountData
   );
 
   return (
@@ -405,6 +412,24 @@ const Renewal = ({
 
                     <FormField
                       control={form.control}
+                      name="newMaturityDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Maturity Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter maturity date"
+                              disabled
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="newMaturityAmount"
                       render={({ field }) => (
                         <FormItem>
@@ -483,6 +508,73 @@ const Renewal = ({
                         )}
                       />
                     </div>
+                    {form.getValues("transMode") === "bank" ? (
+                      <div className="w-full grid grid-cols-1 lg:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="bank"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Bank</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select bank" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {bankAccountData &&
+                                    bankAccountData.length > 0 &&
+                                    bankAccountData.map(({ Id, Bank_Name }) => (
+                                      <SelectItem key={Id} value={`${Id}`}>
+                                        {Bank_Name}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full grid grid-cols-1 lg:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="savings"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Savings</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select savings" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {savingsAccountData &&
+                                    savingsAccountData.length > 0 &&
+                                    savingsAccountData.map(
+                                      ({ Id, Account_No }) => (
+                                        <SelectItem key={Id} value={`${Id}`}>
+                                          {Account_No}
+                                        </SelectItem>
+                                      )
+                                    )}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 

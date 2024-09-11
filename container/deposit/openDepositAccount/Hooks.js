@@ -26,6 +26,7 @@ import {
   getDepositAgentData,
   getDepositProductData,
   getDurationTypeData,
+  getEcsAccountData,
   getMaturityInstructionData,
   getOperationModeData,
   getPayoutModeData,
@@ -708,15 +709,15 @@ export const useOpenDepositAccount = () => {
     try {
       const res = await getDepositEcsAccountAPI(orgId, memberId);
       if (res.message === "Data Found") {
-        // dispatch(getAgentPayoutData(res.details));
+        dispatch(getEcsAccountData(res.details));
       } else {
-        // dispatch(getAgentPayoutData([]));
+        dispatch(getEcsAccountData([]));
       }
       console.log("res", res);
     } catch (error) {
       toast.error("Something went wrong");
       console.error(error);
-      // dispatch(getAgentPayoutData([]));
+      dispatch(getEcsAccountData([]));
     } finally {
       setLoading(false);
     }
@@ -982,6 +983,7 @@ export const useOpenDepositAccount = () => {
     getMaturityInstructionDataApiCall,
     getOperationModeDataApiCall,
     getPayoutModeDataApiCall,
+    getDepositEcsAccountApiCall,
     form,
     handleSubmit,
     handleMemberFormSubmit,

@@ -5,6 +5,7 @@ import { useRenewal } from "./Hooks";
 import { useEffect } from "react";
 import getSessionStorageData from "@/utils/getSessionStorageData";
 import { useOpenDepositAccount } from "../openDepositAccount/Hooks";
+import { useBankDeposit } from "@/container/banking/bankDeposit/Hooks";
 
 const RenewalContainer = () => {
   const token = getSessionStorageData("userToken");
@@ -23,9 +24,12 @@ const RenewalContainer = () => {
 
   const { getDurationTypeDataApiCall } = useOpenDepositAccount();
 
+  const { getBankAccountApiCall } = useBankDeposit();
+
   useEffect(() => {
     if (token && orgId) {
       getDurationTypeDataApiCall();
+      getBankAccountApiCall(orgId);
     }
   }, [token, orgId]);
 

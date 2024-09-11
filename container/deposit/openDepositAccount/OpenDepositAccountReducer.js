@@ -8,6 +8,7 @@ export const initialState = {
   operationModeData: [],
   payoutModeData: [],
   depositAgentData: [],
+  ecsAccountData: [],
 };
 const OpenDepositAccountSlice = createSlice({
   name: "openDepositAccount",
@@ -34,6 +35,9 @@ const OpenDepositAccountSlice = createSlice({
     getDepositAgentData: (state, action) => {
       state.depositAgentData = action.payload;
     },
+    getEcsAccountData: (state, action) => {
+      state.ecsAccountData = action.payload;
+    },
   },
 });
 export const {
@@ -44,5 +48,6 @@ export const {
   getOperationModeData,
   getPayoutModeData,
   getDepositAgentData,
+  getEcsAccountData,
 } = OpenDepositAccountSlice.actions;
 export default OpenDepositAccountSlice.reducer;
